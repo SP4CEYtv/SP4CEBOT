@@ -17,15 +17,16 @@ def after_request(response):
 
 def get_signal(ticker):
     try:
-        # FORCE -USD FOR CRYPTO
         ticker = ticker.upper().strip()
-        if ticker in ['BTC', 'ETH', 'DOGE', 'SOL', 'ADA']:
+        if not ticker.endswith('-USD') and ticker in ['BTC', 'ETH', 'DOGE', 'SOL']:
             ticker += '-USD'
         
-        print(f"Fetching: {ticker}")  # Debug
+        print(f"Fetching: {ticker}")
 
-        data = yf.download(ticker, period='6mo', progress=False)
+        # Longer period for reliability
+        data = yf.download(ticker, period='1y', progress=False)
         if data.empty or len(data) < 30:
+            print(f"No data for {ticker}")
             return {"error": "No data for " + ticker}
 
         close = data['Close']
@@ -52,6 +53,7 @@ def get_signal(ticker):
             "rsi": round(rsi, 2)
         }
     except Exception as e:
+        print(f"Error: {e}")
         return {"error": str(e)}
 
 @app.route('/')
