@@ -1,4 +1,4 @@
-from flask import Flask, jsonify
+from flask import Flask, jsonify, request
 import time
 
 app = Flask(__name__)
@@ -13,12 +13,12 @@ def after_request(response):
         return '', 200
     return response
 
-# HARDCODED FALLBACK DATA (updated daily)
+# HARDCODED FALLBACK (updated daily)
 FALLBACK = {
-    "BTC-USD": {"signal": "SELL", "price": 67234.12, "ma10": 68120.45, "ma30": 69890.12, "rsi": 58.2},
-    "ETH-USD": {"signal": "BUY", "price": 2456.78, "ma10": 2420.50, "ma30": 2380.20, "rsi": 62.3},
-    "AAPL": {"signal": "BUY", "price": 195.20, "ma10": 194.80, "ma30": 192.50, "rsi": 62.1},
-    "DOGE-USD": {"signal": "HOLD", "price": 0.14, "ma10": 0.145, "ma30": 0.142, "rsi": 48.5}
+    "BTC-USD": {"signal": "SELL", "price": 67234, "ma10": 68120, "ma30": 69890, "rsi": 58},
+    "ETH-USD": {"signal": "BUY", "price": 2456, "ma10": 2420, "ma30": 2380, "rsi": 62},
+    "AAPL": {"signal": "BUY", "price": 195, "ma10": 194, "ma30": 192, "rsi": 62},
+    "DOGE-USD": {"signal": "HOLD", "price": 0.14, "ma10": 0.145, "ma30": 0.142, "rsi": 48}
 }
 
 # CACHE
@@ -68,8 +68,8 @@ def get_signal(ticker):
             }
             signal_cache[ticker] = result
             return result
-    except:
-        pass
+    except Exception as e:
+        print(f"yfinance failed: {e}")
 
     # FALLBACK
     if ticker in FALLBACK:
