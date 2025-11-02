@@ -1,8 +1,0 @@
-services:
-  - type: web
-    name: ai-trading-bot
-    env: python
-    pythonVersion: "3.11"
-    plan: free
-    buildCommand: pip install --no-cache-dir -r requirements.txt
-    startCommand: gunicorn main:app
