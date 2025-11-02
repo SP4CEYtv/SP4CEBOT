@@ -51,19 +51,15 @@ def get_signal(ticker):
     except Exception as e:
         return {"error": str(e)}
 
-@app.route('/')
-def home():
-    return "<h1>AI Bot LIVE on Render!</h1>"
-
 @app.route('/signal/<path:ticker>')
 def signal(ticker):
-    # Case-insensitive + normalize
-    ticker = ticker.upper()
+    # Normalize (upper, add -USD if crypto)
+    ticker = ticker.upper().strip()
     if not ticker.endswith('-USD') and ticker in ['ETH', 'BTC', 'DOGE', 'SOL']:
         ticker += '-USD'
-    print(f"Fetching for {ticker}")  # Debug log
+    print(f"Fetching for: {ticker}")  # Debug in Render logs
     result = get_signal(ticker)
-    print(f"SIGNAL for {ticker}: {result}")  # Debug
+    print(f"SIGNAL for {ticker}: {result}")
     return jsonify(result)
 
 if __name__ == '__main__':
