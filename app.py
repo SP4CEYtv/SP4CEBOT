@@ -1,11 +1,18 @@
-from flask import Flask, jsonify, request
+frfrom flask import Flask, jsonify
 import yfinance as yf
 import pandas as pd
 import numpy as np
+import time
 
 app = Flask(__name__)
 
-# CORS
+# GLOBAL CACHE
+signal_cache = {
+    "BTC-USD": {"signal": "HOLD", "price": 0, "timestamp": 0},
+    "ETH-USD": {"signal": "HOLD", "price": 0, "timestamp": 0},
+    "AAPL": {"signal": "HOLD", "price": 0, "timestamp": 0},
+}
+
 @app.after_request
 def after_request(response):
     response.headers.add('Access-Control-Allow-Origin', '*')
@@ -16,14 +23,18 @@ def after_request(response):
     return response
 
 def get_signal(ticker):
+    ticker = ticker.upper().strip()
+    if ticker in ['BTC', 'ETH', 'DOGE']:
+        ticker += '-USD'
+
+    # Use cache if fresh (< 5 min)
+    if ticker in signal_cache and time.time() - signal_cache[ticker]["timestamp"] < 300:
+        print(f"Using cache for {ticker}")
+        return {**signal_cache[ticker], "ticker": ticker, "cached": True}
+
     for attempt in range(3):
         try:
-            ticker = ticker.upper().strip()
-            if not ticker.endswith('-USD') and ticker in ['BTC', 'ETH', 'DOGE', 'SOL']:
-                ticker += '-USD'
-            
-            print(f"Attempt {attempt+1}: Fetching {ticker}")
-
+            print(f"Fetching {ticker} (attempt {attempt+1})")
             data = yf.download(ticker, period='1y', progress=False)
             if not data.empty and len(data) >= 30:
                 close = data['Close']
@@ -41,24 +52,33 @@ def get_signal(ticker):
                 price = round(float(close.iloc[-1]), 2)
                 signal = "BUY" if ma10 > ma30 and rsi < 70 else "SELL" if ma10 < ma30 and rsi > 30 else "HOLD"
 
-                return {
+                # SAVE TO CACHE
+                result = {
                     "ticker": ticker,
                     "signal": signal,
                     "price": price,
                     "ma10": round(ma10, 2),
                     "ma30": round(ma30, 2),
-                    "rsi": round(rsi, 2)
+                    "rsi": round(rsi, 2),
+                    "timestamp": int(time.time()),
+                    "cached": False
                 }
+                signal_cache[ticker] = result
+                return result
         except Exception as e:
-            print(f"Error on attempt {attempt+1}: {e}")
+            print(f"Error: {e}")
+
+    # RETURN CACHED OR FALLBACK
+    if ticker in signal_cache:
+        print(f"Using stale cache for {ticker}")
+        return {**signal_cache[ticker], "ticker": ticker, "cached": True}
     
-    return {"error": "No data — try again in 1 min"}
+    return {"error": "No data — try again", "ticker": ticker}
 
 @app.route('/')
 def home():
-    return "<h1>SP4CEBOT API LIVE</h1><p>Use /api/signal?ticker=BTC-USD</p>"
+    return "<h1>SP4CEBOT API LIVE</h1>"
 
-# QUERY PARAM ENDPOINT — NO DASH ISSUES
 @app.route('/api/signal')
 def signal():
     ticker = request.args.get('ticker', 'BTC-USD')
