@@ -17,15 +17,16 @@ def after_request(response):
 
 def get_signal(ticker):
     try:
+        # FORCE -USD FOR CRYPTO
         ticker = ticker.upper().strip()
-        if not ticker.endswith('-USD') and ticker in ['BTC', 'ETH', 'DOGE', 'SOL']:
+        if ticker in ['BTC', 'ETH', 'DOGE', 'SOL', 'ADA']:
             ticker += '-USD'
         
-        print(f"Fetching: {ticker}")
+        print(f"Fetching: {ticker}")  # Debug
 
         data = yf.download(ticker, period='6mo', progress=False)
         if data.empty or len(data) < 30:
-            return {"error": "No data"}
+            return {"error": "No data for " + ticker}
 
         close = data['Close']
         ma10 = float(close.rolling(10).mean().iloc[-1])
