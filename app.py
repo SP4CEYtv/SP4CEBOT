@@ -23,7 +23,7 @@ def get_signal(ticker):
         
         print(f"Fetching: {ticker}")
 
-        data = yf.download(ticker, period='60d', progress=False)
+        data = yf.download(ticker, period='6mo', progress=False)
         if data.empty or len(data) < 30:
             return {"error": "No data"}
 
