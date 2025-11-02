@@ -16,45 +16,43 @@ def after_request(response):
     return response
 
 def get_signal(ticker):
-    try:
-        ticker = ticker.upper().strip()
-        if not ticker.endswith('-USD') and ticker in ['BTC', 'ETH', 'DOGE', 'SOL']:
-            ticker += '-USD'
-        
-        print(f"Fetching: {ticker}")
+    for attempt in range(3):
+        try:
+            ticker = ticker.upper().strip()
+            if not ticker.endswith('-USD') and ticker in ['BTC', 'ETH', 'DOGE', 'SOL']:
+                ticker += '-USD'
+            
+            print(f"Attempt {attempt+1}: Fetching {ticker}")
 
-        # Longer period for reliability
-        data = yf.download(ticker, period='1y', progress=False)
-        if data.empty or len(data) < 30:
-            print(f"No data for {ticker}")
-            return {"error": "No data for " + ticker}
+            data = yf.download(ticker, period='1y', progress=False)
+            if not data.empty and len(data) >= 30:
+                close = data['Close']
+                ma10 = float(close.rolling(10).mean().iloc[-1])
+                ma30 = float(close.rolling(30).mean().iloc[-1])
+                
+                delta = close.diff()
+                gain = float(delta.where(delta > 0, 0).rolling(14).mean().iloc[-1])
+                loss = float((-delta.where(delta < 0, 0)).rolling(14).mean().iloc[-1])
+                
+                gain = 0.0 if pd.isna(gain) else gain
+                loss = 0.0 if pd.isna(loss) else loss
+                rsi = 100 if loss == 0 else 100 - (100 / (1 + gain / loss))
+                
+                price = round(float(close.iloc[-1]), 2)
+                signal = "BUY" if ma10 > ma30 and rsi < 70 else "SELL" if ma10 < ma30 and rsi > 30 else "HOLD"
 
-        close = data['Close']
-        ma10 = float(close.rolling(10).mean().iloc[-1])
-        ma30 = float(close.rolling(30).mean().iloc[-1])
-        
-        delta = close.diff()
-        gain = float(delta.where(delta > 0, 0).rolling(14).mean().iloc[-1])
-        loss = float((-delta.where(delta < 0, 0)).rolling(14).mean().iloc[-1])
-        
-        gain = 0.0 if pd.isna(gain) else gain
-        loss = 0.0 if pd.isna(loss) else loss
-        rsi = 100 if loss == 0 else 100 - (100 / (1 + gain / loss))
-        
-        price = round(float(close.iloc[-1]), 2)
-        signal = "BUY" if ma10 > ma30 and rsi < 70 else "SELL" if ma10 < ma30 and rsi > 30 else "HOLD"
-
-        return {
-            "ticker": ticker,
-            "signal": signal,
-            "price": price,
-            "ma10": round(ma10, 2),
-            "ma30": round(ma30, 2),
-            "rsi": round(rsi, 2)
-        }
-    except Exception as e:
-        print(f"Error: {e}")
-        return {"error": str(e)}
+                return {
+                    "ticker": ticker,
+                    "signal": signal,
+                    "price": price,
+                    "ma10": round(ma10, 2),
+                    "ma30": round(ma30, 2),
+                    "rsi": round(rsi, 2)
+                }
+        except Exception as e:
+            print(f"Error on attempt {attempt+1}: {e}")
+    
+    return {"error": "No data — try again in 1 min"}
 
 @app.route('/')
 def home():
