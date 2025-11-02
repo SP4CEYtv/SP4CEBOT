@@ -13,7 +13,7 @@ def after_request(response):
         return '', 200
     return response
 
-# HARDCODED FALLBACK (updated daily)
+# HARDCODED FALLBACK
 FALLBACK = {
     "BTC-USD": {"signal": "SELL", "price": 67234, "ma10": 68120, "ma30": 69890, "rsi": 58},
     "ETH-USD": {"signal": "BUY", "price": 2456, "ma10": 2420, "ma30": 2380, "rsi": 62},
@@ -29,11 +29,10 @@ def get_signal(ticker):
     if ticker in ['BTC', 'ETH', 'DOGE']:
         ticker += '-USD'
 
-    # Use cache if fresh
+    # Use cache
     if ticker in signal_cache and time.time() - signal_cache[ticker]["timestamp"] < 300:
         return {**signal_cache[ticker], "ticker": ticker, "cached": True}
 
-    # Try yfinance
     try:
         import yfinance as yf
         import pandas as pd
@@ -68,12 +67,11 @@ def get_signal(ticker):
             }
             signal_cache[ticker] = result
             return result
-    except Exception as e:
-        print(f"yfinance failed: {e}")
+    except:
+        pass
 
     # FALLBACK
     if ticker in FALLBACK:
-        print(f"Using fallback for {ticker}")
         result = {**FALLBACK[ticker], "ticker": ticker, "cached": True, "fallback": True}
         signal_cache[ticker] = result
         return result
