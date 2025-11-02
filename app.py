@@ -53,7 +53,7 @@ def get_signal(ticker):
 
 @app.route('/signal/<path:ticker>')
 def signal(ticker):
-    # Normalize (upper, add -USD if crypto)
+    # Normalize (upper, add -USD if needed)
     ticker = ticker.upper().strip()
     if not ticker.endswith('-USD') and ticker in ['ETH', 'BTC', 'DOGE', 'SOL']:
         ticker += '-USD'
